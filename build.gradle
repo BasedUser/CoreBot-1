@@ -4,6 +4,9 @@ project.ext.mainClassName = "corebot.CoreBot"
 sourceCompatibility = targetCompatibility = 16
 version = '1.0'
 
+compileJava.options.encoding = 'UTF-8'
+compileTestJava.options.encoding = 'UTF-8'
+
 sourceSets.main.java.srcDirs = ["src/"]
 allprojects{
     repositories{

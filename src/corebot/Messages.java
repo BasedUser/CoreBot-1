@@ -547,7 +547,7 @@ public class Messages extends ListenerAdapter{
                 }
 
 
-				text(msg, "У пользователь '@' **@** социальный кредитов.\n", msg.getAuthor().getName(), getSocialCredit(msg.getAuthor()));
+				text(msg, "У пользователь '@' **@** социальный кредитов.\n", user.getName(), getSocialCredit(user));
             }catch(Exception e){
                 errDelete(msg, "Неверное ID или название пользователь.");
             }
@@ -779,8 +779,8 @@ public class Messages extends ListenerAdapter{
     @Override
     public void onMessageReactionAdd(@NotNull MessageReactionAddEvent event){
         try{
-            if(event.getUser() != null && event.getReactionEmote().isEmoji()){
-				if(event.getChannel().equals(mapsChannel) && event.getReactionEmote().getEmoji().equals("❌")){
+            if(event.getUser() != null){
+				if(event.getChannel().equals(mapsChannel) && event.getReactionEmote().isEmoji() && event.getReactionEmote().getEmoji().equals("❌")){
 	                event.getChannel().retrieveMessageById(event.getMessageIdLong()).queue(m -> {
 	                    try{
 	                        String baseUrl = event.retrieveUser().complete().getEffectiveAvatarUrl();
@@ -796,9 +796,9 @@ public class Messages extends ListenerAdapter{
 	                    }
 	                });
 				}else if(event.getReactionEmote().getName().equals("plussc")){
-					addSocialCredit(event.getUser(), socialCreditChange);
+					addSocialCredit(event.retrieveMessage().complete().getAuthor(), socialCreditChange);
 				}else if(event.getReactionEmote().getName().equals("minussc")){
-					addSocialCredit(event.getUser(), -socialCreditChange);
+					addSocialCredit(event.retrieveMessage().complete().getAuthor(), -socialCreditChange);
 				}
             }
         }catch(Exception e){
@@ -807,9 +807,9 @@ public class Messages extends ListenerAdapter{
     }
 
 	@Override
-	public void onMessageReactionRemove(MessageReactionRemoveEvent event){
+	public void onMessageReactionRemove(@NotNull MessageReactionRemoveEvent event){
 		try{
-            if(event.getUser() != null && event.getReactionEmote().isEmoji()){
+            if(event.getUser() != null){
 				if(event.getReactionEmote().getName().equals("plussc")){
 					addSocialCredit(event.getUser(), -socialCreditChange);
 				}else if(event.getReactionEmote().getName().equals("minussc")){
