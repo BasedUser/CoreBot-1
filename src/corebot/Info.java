@@ -4,7 +4,7 @@ public enum Info{
     links("Различные ссылки",
     """
     Внимание! Учитывайте, что на каждой ссылке от Вас могут ожидать использование *английского языка*.
-    
+
     [Исходный код на GitHub](https://github.com/Anuken/Mindustry/)
     [Форма предложений](https://github.com/Anuken/Mindustry-Suggestions/issues/new/choose)
     [Форма сообщений о багах](https://github.com/Anuken/Mindustry/issues/new/choose)
@@ -20,7 +20,7 @@ public enum Info{
     beta("Бета-версия на iOS",
     """
     Что-бы присоединиться к бета-тестированию на iOS, нажмите на [данную ссылку](https://testflight.apple.com/join/79Azm1hZ), затем установите приложение TestFlight от Apple.
-    
+
     На Google Play бета-тестирование приостановлено. Скачайте версию с itch.io.
     """),
     rules("Правила",

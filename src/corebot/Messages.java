@@ -52,6 +52,7 @@ public class Messages extends ListenerAdapter{
     private static final int scamAutobanLimit = 3, pingSpamLimit = 20, minModStars = 10, naughtyTimeoutMins = 20;
     private static final SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd");
     private static final String[] warningStrings = {"однажды", "дважды", "трижды", "слишком много раз"};
+	private static final int socialCreditChange = 15;
 
     private static final String
     cyrillicFrom = "абсдефгнигклмпоркгзтюушхуз",
@@ -158,7 +159,7 @@ public class Messages extends ListenerAdapter{
                 .setMemberCachePolicy(MemberCachePolicy.ALL).disableCache(CacheFlag.VOICE_STATE).build();
             jda.awaitReady();
             jda.addEventListener(this);
-            
+
             loadChannels();
             Log.info("Started validating nicknames.");
             guild.loadMembers(this::validateNickname);
@@ -168,18 +169,18 @@ public class Messages extends ListenerAdapter{
             throw new RuntimeException(e);
         }
     }
-    
+
     TextChannel channel(long id){
         return guild.getTextChannelById(id);
     }
-    
+
     void loadChannels(){
         //all guilds and channels are loaded here for faster lookup
-        
+
         guild = jda.getGuildById(953942350818856980L);
-        
+
         //modderRole = guild.getRoleById(965691639811149865L);
-        
+
         pluginChannel = channel(966951464226422784L);
         crashReportChannel = channel(966947096890585128L);
         announcementsChannel = channel(959784619182542888L);
@@ -331,7 +332,7 @@ public class Messages extends ListenerAdapter{
             if(args.length == 0){
                 info(msg.getChannel(), "Modder Verification", """
                 To obtain the Modder role, you must do the following:
-                
+
                 1. Own a Github repository with the `mindustry-mod` tag.
                 2. Have at least @ stars on the repository.
                 3. Temporarily add your Discord `USERNAME#DISCRIMINATOR` (`@`) to the repository description or your user bio, to verify ownership.
@@ -522,6 +523,36 @@ public class Messages extends ListenerAdapter{
             sendWarnings(msg, msg.getAuthor());
         });
 
+		handler.<Message>register("socialcredit", "[@пользователь]", "Подать информация о социальный кредиты. Только в #боты.", (args, msg) -> {
+            if(msg.getChannel().getIdLong() != botsChannel.getIdLong()){
+                errDelete(msg, "Использовать команда в канал #боты.");
+                return;
+            }
+
+			try{
+                User user;
+                if(args.length > 0){
+                    long id;
+                    try{
+                        id = Long.parseLong(args[0]);
+                    }catch(NumberFormatException e){
+                        String author = args[0].substring(2, args[0].length() - 1);
+                        if(author.startsWith("!")) author = author.substring(1);
+                        id = Long.parseLong(author);
+                    }
+
+                    user = jda.retrieveUserById(id).complete();
+                }else{
+                    user = msg.getAuthor();
+                }
+
+
+				text(msg, "У пользователь '@' **@** социальный кредитов.\n", msg.getAuthor().getName(), getSocialCredit(msg.getAuthor()));
+            }catch(Exception e){
+                errDelete(msg, "Неверное ID или название пользователь.");
+            }
+        });
+
         handler.<Message>register("avatar", "[@пользователь]", "Получить полную \"аватарку\" пользователя.", (args, msg) -> {
             if(msg.getChannel().getIdLong() != botsChannel.getIdLong() && !isAdmin(msg.getAuthor())){
                 errDelete(msg, "Используйте команду в канале #боты.");
@@ -663,6 +694,22 @@ public class Messages extends ListenerAdapter{
             }
         });
 
+		adminHandler.<Message>register("givecredit", "<@пользователь> <количество>", "Давать социальный кредиты.", (args, msg) -> {
+			String author = args[0].substring(2, args[0].length() - 1);
+            if(author.startsWith("!")) author = author.substring(1);
+            try{
+                long l = Long.parseLong(author);
+                User user = jda.retrieveUserById(l).complete();
+                int credit = addSocialCredit(user, Integer.parseInt(args[1]));
+				text(msg, "**@**, вы быть данными **@** социальных кредитов. Вы теперь иметь **@** социальных кредитов.", user.getAsMention(), args[1], credit);
+                if(credit < -10000){
+                    moderationChannel.sendMessage("Пользователю " + user.getAsMention() + " имеет менее -10000 социальный кредит!").queue();
+                }
+            }catch(Exception e){
+                errDelete(msg, "Неверно ID, название пользователь, или количество социальный кредиты.");
+            }
+		});
+
         adminHandler.<Message>register("unwarn", "<@пользователь> <порядковыйномер>", "Убрать предупреждение.", (args, msg) -> {
             String author = args[0].substring(2, args[0].length() - 1);
             if(author.startsWith("!")) author = author.substring(1);
@@ -732,26 +779,47 @@ public class Messages extends ListenerAdapter{
     @Override
     public void onMessageReactionAdd(@NotNull MessageReactionAddEvent event){
         try{
-            if(event.getUser() != null && event.getChannel().equals(mapsChannel) && event.getReactionEmote().isEmoji() && event.getReactionEmote().getEmoji().equals("❌")){
-                event.getChannel().retrieveMessageById(event.getMessageIdLong()).queue(m -> {
-                    try{
-                        String baseUrl = event.retrieveUser().complete().getEffectiveAvatarUrl();
+            if(event.getUser() != null && event.getReactionEmote().isEmoji()){
+				if(event.getChannel().equals(mapsChannel) && event.getReactionEmote().getEmoji().equals("❌")){
+	                event.getChannel().retrieveMessageById(event.getMessageIdLong()).queue(m -> {
+	                    try{
+	                        String baseUrl = event.retrieveUser().complete().getEffectiveAvatarUrl();
 
-                        for(var embed : m.getEmbeds()){
-                            if(embed.getAuthor() != null && embed.getAuthor().getIconUrl() != null && embed.getAuthor().getIconUrl().equals(baseUrl)){
-                                m.delete().queue();
-                                return;
-                            }
-                        }
-                    }catch(Exception e){
-                        Log.err(e);
-                    }
-                });
+	                        for(var embed : m.getEmbeds()){
+	                            if(embed.getAuthor() != null && embed.getAuthor().getIconUrl() != null && embed.getAuthor().getIconUrl().equals(baseUrl)){
+	                                m.delete().queue();
+	                                return;
+	                            }
+	                        }
+	                    }catch(Exception e){
+	                        Log.err(e);
+	                    }
+	                });
+				}else if(event.getReactionEmote().getName().equals("plussc")){
+					addSocialCredit(event.getUser(), socialCreditChange);
+				}else if(event.getReactionEmote().getName().equals("minussc")){
+					addSocialCredit(event.getUser(), -socialCreditChange);
+				}
             }
         }catch(Exception e){
             Log.err(e);
         }
     }
+
+	@Override
+	public void onMessageReactionRemove(MessageReactionRemoveEvent event){
+		try{
+            if(event.getUser() != null && event.getReactionEmote().isEmoji()){
+				if(event.getReactionEmote().getName().equals("plussc")){
+					addSocialCredit(event.getUser(), -socialCreditChange);
+				}else if(event.getReactionEmote().getName().equals("minussc")){
+					addSocialCredit(event.getUser(), socialCreditChange);
+				}
+            }
+        }catch(Exception e){
+            Log.err(e);
+        }
+	}
 
     @Override
     public void onMessageReceived(MessageReceivedEvent event){
@@ -899,9 +967,9 @@ public class Messages extends ListenerAdapter{
         event.getUser().openPrivateChannel().complete().sendMessage(
         """
         **Добро пожаловать в русскоязычный дискорд Mindustry.**
-                
+
         *Напоминаем прочитать #правила и описания каналов до отправления сообщений.*
-                
+
         **Посмотреть все часто задаваемые вопросы можно здесь:**
         <https://discord.com/channels/953942350818856980/953955256147009538/953955996651356182>
         """
@@ -1007,6 +1075,15 @@ public class Messages extends ListenerAdapter{
 
         return list;
     }
+
+	private int getSocialCredit(User user){
+        return prefs.getInt("credit-" + user.getIdLong(), 0);
+    }
+	private int addSocialCredit(User user, int amount){
+		int credit = getSocialCredit(user) + amount;
+		prefs.put("credit-" + user.getIdLong(), String.valueOf(credit));
+		return credit;
+	}
 
     private Jval fixJval(Jval val){
         if(val.isArray()){
